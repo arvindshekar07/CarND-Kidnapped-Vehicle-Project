@@ -8,13 +8,15 @@
 #include <random>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include "particle_filter.h"
 
 
 using namespace std;
 
-default_random_engine gen;
+static default_random_engine gen;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
     // TODO: Set the number of particles. Initialize all particles to first position (based on estimates of
@@ -24,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
 
     //	initialize the numner of particles .
-    num_particles = 50;
+    num_particles = 5;
 
     //	applying sensor noise
     // This line creates a normal (Gaussian) distribution for x
@@ -65,7 +67,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     normal_distribution<double> normal_dist_psi(0, std_pos[2]);
 
     for (int i = 0; i < num_particles; i++) {
-        Particle particle = particles[i];
+        Particle &particle = particles[i];
 
         if (fabs(yaw_rate) < 0.00001) {
             particle.x += velocity * delta_t * cos(particle.theta);
@@ -94,7 +96,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 //    https://stackoverflow.com/questions/409348/iteration-over-stdvector-unsigned-vs-signed-index-variable |iterate over a vector
     for (unsigned i=0; i < observations.size(); i++) { // itrating over each landmark
-        LandmarkObs landmarkObsObservation = observations[i];
+        LandmarkObs &landmarkObsObservation = observations[i];
 
 
         int tempId = -1;
@@ -102,7 +104,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
         double minDistance = numeric_limits<double>::max() ;//http://en.cppreference.com/w/cpp/types/numeric_limits/max
 
         for (unsigned j = 0; j < predicted.size(); j++) { // itrating over each prediction over each landmark
-            LandmarkObs landmarkObsPredicted = predicted[j];
+            LandmarkObs &landmarkObsPredicted = predicted[j];
 
             double euclidianDistance = dist(landmarkObsObservation.x,landmarkObsObservation.y,landmarkObsPredicted.x,landmarkObsPredicted.y);
             if (euclidianDistance < minDistance){
@@ -131,7 +133,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     // for each particle...
     for (int i = 0; i < num_particles; i++) {
 
-        Particle particle = particles[i];
+        Particle &particle = particles[i];
 
         // create a vector to hold the map landmark locations predicted to be within sensor range of the particle
         vector<LandmarkObs> listOfPredictions;
@@ -234,9 +236,7 @@ void ParticleFilter::resample() {
 
     auto index = uniintdist(gen);
 
-    // get max weight  in the
     double max_weight = *max_element(listWeights.begin(), listWeights.end());
-
 
     vector<Particle> tempListParticles;
 
@@ -244,8 +244,6 @@ void ParticleFilter::resample() {
     uniform_real_distribution<double> unirealdist(0.0, max_weight);
 
     double beta = 0.0;
-
-    // spin the resample wheel!
     for (int i = 0; i < num_particles; i++) {
         beta += unirealdist(gen) * 2.0;
         while (beta > listWeights[index]) {
@@ -254,7 +252,6 @@ void ParticleFilter::resample() {
         }
         tempListParticles.push_back(particles[index]);
     }
-
     particles = tempListParticles;
 
 }
